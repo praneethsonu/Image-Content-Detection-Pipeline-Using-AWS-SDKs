@@ -102,7 +102,7 @@ When we run the code above and print the response from our API call, it should r
 ```
 The "HTTPStatusCode": 200 indicates that our bucket was successfully created.
 
-#### 2 Create IAM Role
+#### 2. Create IAM Role
 The Lambda function requires an execution role with the permissions necessary for our workflow. To grant these permissions, we need to create a trust policy and permissions policy.
 
 Python
@@ -169,3 +169,136 @@ except Exception as e:
 Once you run this file, you should receive the ARN of an IAM role in this format after running the script above: arn:aws:iam::accountid:role/LambdaRekognitionRole. (Note that accountid should reflect your AWS account ID). Copy this role ARN to use in the next section.
 
 #### 3. Create Lambda Function
+The Lambda function includes a call to the Amazon Rekognition DetectLabels  API. This API returns an array of labels for the real-world objects detected in an image. We then use the PutObjectTagging  API to add those labels as tags to our S3 object.
+
+By creating a Boto3 session that we can use to create clients for the S3 and Rekognition services. A session stores configuration state and allows you to create service clients and resources. 
+Python
+```bash
+import boto3
+
+session = boto3.session.Session()
+
+rekognition = session.client('rekognition')
+s3 = session.client('s3')
+
+def handler(event, context):
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+
+    response = rekognition.detect_labels(
+        Image={'S3Object': {'Bucket': bucket, 'Name': key}}
+    )
+
+    labels = []
+    for label in response['Labels']:
+        if label['Confidence'] > 80:
+            labels.append(label['Name']) 
+
+    labels = labels[:5]
+
+    tag_set = []
+    for i, label in enumerate(labels):
+        tag_set.append({'Key': 'label'+str(i+1), 'Value': label})
+
+    # Add tags to image 
+    s3.put_object_tagging(
+        Bucket=bucket,
+        Key=key,
+        Tagging={'TagSet': tag_set} 
+    )
+```
+The Lambda function above processes an image from S3 and detects the top 5 labels with a confidence level above 80%. These labels are then added as tags to our S3 object.
+
+#### Zip our Lambda file
+In order to upload our code to lambda, we must first compress the file above into a .zip file which we will use in the next step. You can do this from the command line, for example: zip lambda_function.zip lambda_function.py.
+
+#### Creating our Lambda function
+We will use the CreateFunction  API to create our Lambda function, passing the code from lambda_function.zip using the ZipFile parameter. (Be sure to use your specific IAM role ARN. The accountid below should be your AWS account ID.)
+Python
+```bash
+import boto3
+
+client = boto3.client('lambda')
+
+try:
+    with open('lambda_function.zip', 'rb') as f: # Specify name of .zip file from last section
+        file_contents = f.read()
+
+    response = client.create_function(
+        FunctionName='detect_image_uploaded_to_s3',
+        Runtime='python3.11',
+        Role='arn:aws:iam::accountid:role/LambdaRekognitionRole', # Input your role ARN here
+        Handler='lambda_function.handler',
+        Code={
+            'ZipFile': file_contents
+        }
+    )
+
+    print(response['FunctionArn'])
+
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+Once we run this file, it will output a FunctionARN which we will use in the next section.
+#### 4. Create S3 Event Notification
+Before creating the S3 event notification, we must allow our S3 bucket to invoke our function. To do that we will use the Lambda AddPermission  API:
+Python
+```bash
+import boto3
+
+client = boto3.client('lambda')
+
+try:
+    response = client.add_permission(
+        FunctionName='detect_image_uploaded_to_s3',
+        StatementId="s3invoke",
+        Action="lambda:InvokeFunction",
+        Principal="s3.amazonaws.com",
+        SourceArn="arn:aws:s3:::your-bucket-name" # Add your bucket name here
+    )
+    print(response)
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+#### Add bucket notification configuration
+We will use the PutBucketNotificationConfiguration  API to create an S3 event notification, which will trigger our Lambda function when a file is uploaded.
+
+Note that we have specified the prefix filter images/ below, so that we only invoke our function when something is uploaded to S3 with that prefix. (You could also specify a suffix, for example if you only wanted this event to run when .jpg files are uploaded.)
+
+For the LambdaFunctionArn value, be sure to specify the correct region and accountid values that correspond to your account.
+Python
+```bash
+import boto3
+
+s3 = boto3.client('s3')
+
+try:
+    response = s3.put_bucket_notification_configuration(
+        Bucket='your-bucket-name', # Add your bucket name here
+        NotificationConfiguration={
+            "LambdaFunctionConfigurations": [
+                {
+                    # Input your actual Lambda ARN here:
+                    "LambdaFunctionArn": "arn:aws:lambda:us-west-2:accountid:function:detect_image_uploaded_to_s3",
+                    "Events": [
+                        "s3:ObjectCreated:*"
+                    ],
+                    "Filter": {
+                        "Key": {
+                            "FilterRules": [
+                                {
+                                    "Name": "Prefix",
+                                    "Value": "images/"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    )
+    print(response)
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+After running that code, we are ready to test our workflow in the next section!
