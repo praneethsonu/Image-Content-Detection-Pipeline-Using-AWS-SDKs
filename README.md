@@ -19,7 +19,7 @@ The workflow involves the following steps:
 
 ## The Steps involved are:
 ### 1. Configuration
-### 2. SDK Setuo
+### 2. SDK Setup
 ### 3. Development
 ### 4. Conclusion
 
