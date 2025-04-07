@@ -354,3 +354,63 @@ Running the script above should output the following:
 ```bash
 Cat, Kitten, Couch, Furniture, Animal
 ```
+If you see tags returned then congrats! You have successfully completed implementing this workflow.
+
+## 5. Cleanup
+It is important to clean up resources that are no longer needed in order to avoid unexpected charges. In the section below, we will delete the IAM policy, role, Lambda function, and S3 bucket that we created.
+
+#### Deleting the resources we created
+Prior to deleting an IAM role using the DeleteRole  API, we first need to delete our associated IAM policy. We can use the DeleteRolePolicy  API to delete the inline policy we created for our role.
+
+Then, we will use the DeleteFunction  API to delete our Lambda function.
+
+Finally, we need to delete our S3 bucket. A bucket must be empty before it can be deleted, so we will use DeleteObject  to delete the image we uploaded. Then we can delete our bucket using the DeleteBucket  API.
+
+Python
+```bash
+import boto3
+
+# Create clients for IAM, Lambda, and S3
+iam_client = boto3.client('iam')
+lambda_client = boto3.client('lambda')
+s3_client = boto3.client('s3')
+
+bucket_name = 'your-bucket-name' # Your actual bucket name created in Step 1
+role_name = 'LambdaRekognitionRole' # Your actual role name created in Step 2
+
+try:
+    # Delete IAM role policy and role
+    iam_client.delete_role_policy(
+        RoleName=role_name,
+        PolicyName='RekognitionDetectLabelsPolicy'
+    )
+    print("IAM role policy deleted.")
+
+    iam_client.delete_role(
+        RoleName=role_name
+    )
+    print("IAM role deleted.")
+
+    # Delete Lambda function
+    lambda_client.delete_function(
+        FunctionName='detect_image_uploaded_to_s3'
+    )
+    print("Lambda function deleted.")
+
+    # Delete S3 object and bucket
+    s3_client.delete_object(
+        Bucket=bucket_name,
+        Key='images/cat.jpg'
+    )
+    print("S3 object deleted.")
+
+    s3_client.delete_bucket(
+        Bucket=bucket_name
+    )
+    print("S3 bucket deleted.")
+
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+## Summary
+Congratulations on completing the Image Content Detection Pipeline Using AWS SDKs with Python Project
