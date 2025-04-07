@@ -63,7 +63,7 @@ Running that script should output our expected identity info:
 
 Download the complete code snippets from [Here](https://static.us-east-1.prod.workshops.aws/public/8a096b8e-0baf-42fb-aa6c-b3e736800167/assets/files.zip)
 
-1. Create S3 Bucket
+#### 1. Create S3 Bucket
 An S3 bucket in the code snippets, be sure to provide your unique bucket name.
 Python
 ```bash
@@ -101,3 +101,71 @@ When we run the code above and print the response from our API call, it should r
 }
 ```
 The "HTTPStatusCode": 200 indicates that our bucket was successfully created.
+
+#### 2 Create IAM Role
+The Lambda function requires an execution role with the permissions necessary for our workflow. To grant these permissions, we need to create a trust policy and permissions policy.
+
+Python
+```bash
+import boto3
+import json
+
+iam = boto3.client('iam')
+
+trust_policy = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+rekognition_policy = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObjectTagging",
+            ],
+            "Resource": [
+                "arn:aws:s3:::your-bucket-name/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "rekognition:DetectLabels",
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+try:
+    response = iam.create_role(
+        RoleName='LambdaRekognitionRole',
+        AssumeRolePolicyDocument=json.dumps(trust_policy)
+    )
+    role = response['Role']
+
+    iam.put_role_policy(
+        RoleName=role['RoleName'],
+        PolicyName='RekognitionDetectLabelsPolicy',
+        PolicyDocument=json.dumps(rekognition_policy)
+    )
+
+    print(role['Arn'])
+
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+Once you run this file, you should receive the ARN of an IAM role in this format after running the script above: arn:aws:iam::accountid:role/LambdaRekognitionRole. (Note that accountid should reflect your AWS account ID). Copy this role ARN to use in the next section.
+
+#### 3. Create Lambda Function
