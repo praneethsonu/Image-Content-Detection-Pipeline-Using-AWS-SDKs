@@ -59,4 +59,45 @@ Running that script should output our expected identity info:
     },
 }
 ```
+## 3. Development
 
+Download the complete code snippets from [Here](https://static.us-east-1.prod.workshops.aws/public/8a096b8e-0baf-42fb-aa6c-b3e736800167/assets/files.zip)
+
+1. Create S3 Bucket
+An S3 bucket in the code snippets, be sure to provide your unique bucket name.
+Python
+```bash
+import boto3
+
+client = boto3.client('s3')
+
+try:
+    response = client.create_bucket(
+        Bucket='your-bucket-name', # Add your bucket name here
+        CreateBucketConfiguration={'LocationConstraint': 'us-west-2'}  # Specify your region if not using us-east-1
+    )
+    print(response)
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+When we run the code above and print the response from our API call, it should return something like this:
+```bash
+{
+  "ResponseMetadata": {
+    "RequestId": "QJ9031EF2V6RDGWK",
+    "HostId": "CtoPHueAgF+IZsGRAdzhGIyikdJMV/91HgQurOfpfgaCGJmnfDMeuaxg0/q8iTRK+3cyuUiAUGM=",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amz-id-2": "CtoPHueAgF+IZsGRAdzhGIyikdJMV/91HgQurOfpfgaCGJmnfDMeuaxg0/q8iTRK+3cyuUiAUGM=",
+      "x-amz-request-id": "QJ9031EF2V6RDAEM",
+      "date": "Tue, 12 Dec 2023 18:05:04 GMT",
+      "location": "http://your-bucket-name.s3.amazonaws.com/",
+      "server": "AmazonS3",
+      "content-length": "0"
+    },
+    "RetryAttempts": 0
+  },
+  "Location": "http://your-bucket-name.s3.amazonaws.com/"
+}
+```
+The "HTTPStatusCode": 200 indicates that our bucket was successfully created.
