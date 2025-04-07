@@ -302,3 +302,55 @@ except Exception as e:
     print(f"An error occurred: {e}")
 ```
 After running that code, we are ready to test our workflow in the next section!
+
+## 4. Conclusion
+We are now ready to test our workflow. Using S3 APIs, we will upload an image to our S3 bucket and confirm that it invokes our Lambda function.
+![image](https://github.com/user-attachments/assets/38d2dc62-4fee-4a78-a387-c33b4bf4b3a5)
+
+#### Running app
+Upload file to S3
+First we want to upload an image to our S3 bucket to confirm that it invokes our Lambda function. We can use the image below to test our application. Simply right-click on the image and choose the option to save the image to the directory where you are running your scripts.
+![image](https://github.com/user-attachments/assets/e98103fd-b0e1-4f7e-9182-cc33b4f565c4)
+
+Python
+We can use the upload_file  command to upload a file to S3
+```bash
+import boto3
+
+s3 = boto3.client('s3')
+
+bucket_name = 'your-bucket-name' # Input your actual bucket name
+file_name = './cat.jpg'
+object_name = 'images/cat.jpg'
+
+try:
+    response = s3.upload_file(file_name, bucket_name, object_name)
+    print(response)
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+#### List S3 objects and tags
+Once our image is uploaded, it should automatically start our workflow. The S3 event notification triggers our Lambda function, in which we detect the image labels and add the tags to our S3 object. Now we will use the the GetObjectTagging  API to retrieve the label tags that were added.
+
+Python
+```bash
+import boto3
+
+s3 = boto3.client('s3')
+
+try:
+    response = s3.get_object_tagging(
+        Bucket='your-bucket-name',  # Input your actual bucket name
+        Key='images/cat.jpg'
+    )
+    tag_values = [tag['Value'] for tag in response['TagSet']]
+    output = ', '.join(tag_values)
+    print(output)
+except Exception as e:
+    print(f"An error occurred: {e}")
+```
+Running the script above should output the following:
+
+```bash
+Cat, Kitten, Couch, Furniture, Animal
+```
