@@ -22,6 +22,7 @@ The workflow involves the following steps:
 ### 2. SDK Setup
 ### 3. Development
 ### 4. Conclusion
+### 5. CleanUp
 
 ## Getting Started
 [Getting Started With Steps](https://github.com/praneethsonu/Image-Content-Detection-Pipeline-Using-AWS-SDKs/tree/main/Getting%20Started%20With%20Steps)
