@@ -24,8 +24,7 @@ The workflow involves the following steps:
 ### 4. Conclusion
 
 ## Getting Started
+[Getting Started With Steps](https://github.com/praneethsonu/Image-Content-Detection-Pipeline-Using-AWS-SDKs/tree/main/Getting%20Started%20With%20Steps)
 
-
-
-
-
+## License
+This project is licensed under the MIT License.
